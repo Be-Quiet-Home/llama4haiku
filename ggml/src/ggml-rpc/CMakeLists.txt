@@ -9,6 +9,10 @@ if (WIN32)
     target_link_libraries(ggml-rpc PRIVATE ws2_32)
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    target_link_libraries(ggml-rpc PRIVATE network)
+endif()
+
 # RDMA auto-detection (Linux only, requires libibverbs)
 if (NOT WIN32 AND NOT APPLE)
     find_library(IBVERBS_LIB ibverbs)
