@@ -5,6 +5,54 @@
 >
 > Read more: [CONTRIBUTING.md](CONTRIBUTING.md)
 
+---
+
+## Haiku port
+
+This fork adds Haiku OS (x86_64) build support on top of upstream `ggml-org/llama.cpp`. Inference with the CPU and RPC backends has been verified working. The port is a small set of surgical changes; details below so future maintainers and agents can re-apply or extend it after an upstream rebase.
+
+### Files changed and why
+
+| File | Change | Reason |
+| --- | --- | --- |
+| `common/arg.cpp` | Added `#elif defined(__HAIKU__)` -> `#include <limits.h>` | Haiku has no `<sys/syslimits.h>`; the old fallback include breaks compilation. `<limits.h>` provides `PATH_MAX` (= 1024). |
+| `common/download.cpp` | Same `__HAIKU__` -> `<limits.h>` branch | Same reason as above (duplicated include block). |
+| `common/common.cpp` | Added `__HAIKU__` to the `fs_get_cache_directory()` platform guard | Without it Haiku falls through to `#error Unknown architecture`. Haiku follows the XDG `~/.cache` convention. |
+| `tools/rpc/rpc-server.cpp` | Same `__HAIKU__` addition to its duplicated `fs_get_cache_directory()` | Same reason; this copy is intentionally standalone to avoid linking libcommon. |
+| `tools/server/CMakeLists.txt` | `if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")` -> link `network` | Haiku ships BSD sockets in `libnetwork`, not `libc`. The server uses sockets via cpp-httplib. |
+| `ggml/src/ggml-rpc/CMakeLists.txt` | Same Haiku -> link `network` guard | RPC transport (`transport.cpp`) calls `socket`/`connect`/`send`/`recv`. |
+| `vendor/cpp-httplib/CMakeLists.txt` | Same Haiku -> link `network` guard (PUBLIC) | httplib is the HTTP library shared by the server; needs `network` at link and (transitively) for consumers. |
+| `vendor/miniaudio/miniaudio.h` | Guarded `pthread_attr_setinheritsched` call with `!defined(__HAIKU__)` | Haiku declares this function inside `#if 0` in `pthread.h` (unimplemented). Skipping it only affects audio thread scheduling priority, which the code treats as non-critical. |
+
+### Platform conventions for Haiku changes
+
+- **CMake platform test:** use `CMAKE_SYSTEM_NAME STREQUAL "Haiku"` (CMake sets this automatically on Haiku). Do **not** use a bare `if (HAIKU)` - there is no such built-in variable.
+- **Preprocessor symbol:** `__HAIKU__` is defined by gcc on Haiku.
+- **`PATH_MAX`:** available via `<limits.h>` (value 1024). Never include `<sys/syslimits.h>` - it does not exist on Haiku.
+- **`mlock` / `_POSIX_MEMLOCK_RANGE`:** Haiku defines `_POSIX_MEMLOCK_RANGE` and provides `mlock()`, but does **not** define `RLIMIT_MEMLOCK`. Upstream already handles this at `src/llama-mmap.cpp` via an `__HAIKU__` guard in the `raw_lock` suggestion path - no change needed there.
+
+### Build and run
+
+```sh
+cmake -B build -S . -DGGML_RPC=ON -DLLAMA_BUILD_UI=OFF
+cmake --build build -j$(nproc)
+
+# shared-lib build: set library path at run time
+LD_LIBRARY_PATH=build/bin ./build/bin/llama-cli -m model.gguf -p "Hello"
+```
+
+`-DLLAMA_BUILD_UI=OFF` is recommended: the embedded web UI cannot be built on Haiku (node/npm too old for the Svelte toolchain), and the prebuilt-asset download from the HF bucket is unavailable. The server HTTP API works regardless.
+
+### Known limitations
+
+- CPU and RPC backends only - no GPU acceleration (no CUDA/Metal/Vulkan/HIP).
+- No embedded web UI for `llama-server` (HTTP API unaffected).
+- Audio thread priority is not set (miniaudio guard); audio playback still works.
+
+---
+
+## Guidelines for Contributors
+
 AI assistance is permissible only when the majority of the code is authored by a human contributor, with AI employed exclusively for corrections or to expand on verbose modifications that the contributor has already conceptualized.
 
 ---

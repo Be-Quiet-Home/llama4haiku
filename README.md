@@ -299,6 +299,35 @@ Instructions for adding support for new models: [HOWTO-add-model.md](docs/develo
 | [Hexagon [In Progress]](docs/backend/snapdragon/README.md) | Snapdragon |
 | [VirtGPU](docs/backend/VirtGPU.md) | VirtGPU APIR |
 
+## Haiku OS support
+
+This fork adds support for building and running llama.cpp on the [Haiku](https://www.haiku-os.org/) operating system (x86_64). Inference has been verified working with the CPU and RPC backends.
+
+### Build
+
+Haiku puts the BSD sockets API in `libnetwork` rather than `libc`, and its POSIX headers differ slightly from Linux. The build works with the standard CMake flow:
+
+```sh
+cmake -B build -S . -DGGML_RPC=ON -DLLAMA_BUILD_UI=OFF
+cmake --build build -j$(nproc)
+```
+
+Binaries are produced in `build/bin/`. Because the build produces shared libraries, run them with the library path set:
+
+```sh
+LD_LIBRARY_PATH=build/bin ./build/bin/llama-cli -m model.gguf -p "Hello"
+```
+
+### Limitations
+
+- **CPU only.** There are no Metal, CUDA, HIP, or Vulkan backends; only the CPU and RPC backends are available.
+- **No embedded web UI.** The `llama-server` web UI cannot be built on Haiku (node/npm on Haiku is too old for the UI's build toolchain, and the prebuilt asset download is unavailable). The server's HTTP API works normally; pass `-DLLAMA_BUILD_UI=OFF` to silence the UI provisioning warnings.
+- **Audio thread priority.** Haiku does not implement `pthread_attr_setinheritsched` (the symbol is declared but unimplemented), so the miniaudio thread-priority path is skipped. Audio playback still works; only scheduling priority is affected.
+
+### Maintenance
+
+The Haiku port is carried as a small set of patches on top of upstream `ggml-org/llama.cpp`. When rebasing onto a new upstream release, re-apply the changes listed in [AGENTS.md](AGENTS.md#haiku-port) and re-check the platform guards, as upstream frequently refactors the affected files.
+
 ## Obtaining and quantizing models
 
 The [Hugging Face](https://huggingface.co) platform hosts a [number of LLMs](https://huggingface.co/models?library=gguf&sort=trending) compatible with `llama.cpp`:
