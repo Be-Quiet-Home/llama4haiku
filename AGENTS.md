@@ -34,26 +34,19 @@ This fork adds Haiku OS (x86_64) build support on top of upstream `ggml-org/llam
 ### Build and run
 
 ```sh
-cmake -B build -S . -DGGML_RPC=ON -DLLAMA_BUILD_UI=OFF
+cmake -B build -S . -DGGML_RPC=ON
 cmake --build build -j$(nproc)
 
 # shared-lib build: set library path at run time
 LD_LIBRARY_PATH=build/bin ./build/bin/llama-cli -m model.gguf -p "Hello"
 ```
 
-`-DLLAMA_BUILD_UI=OFF` is recommended: the embedded web UI cannot be built on Haiku (node/npm too old for the Svelte toolchain), and the prebuilt-asset download from the HF bucket is unavailable. The server HTTP API works regardless.
-
 ### Known limitations
 
 - CPU and RPC backends only - no GPU acceleration (no CUDA/Metal/Vulkan/HIP).
-- No embedded web UI for `llama-server` (HTTP API unaffected).
 - Audio thread priority is not set (miniaudio guard); audio playback still works.
 
 ---
-
-## Guidelines for Contributors
-
-AI assistance is permissible only when the majority of the code is authored by a human contributor, with AI employed exclusively for corrections or to expand on verbose modifications that the contributor has already conceptualized.
 
 ---
 

@@ -308,7 +308,7 @@ This fork adds support for building and running llama.cpp on the [Haiku](https:/
 Haiku puts the BSD sockets API in `libnetwork` rather than `libc`, and its POSIX headers differ slightly from Linux. The build works with the standard CMake flow:
 
 ```sh
-cmake -B build -S . -DGGML_RPC=ON -DLLAMA_BUILD_UI=OFF
+cmake -B build -S . -DGGML_RPC=ON
 cmake --build build -j$(nproc)
 ```
 
@@ -321,7 +321,6 @@ LD_LIBRARY_PATH=build/bin ./build/bin/llama-cli -m model.gguf -p "Hello"
 ### Limitations
 
 - **CPU only.** There are no Metal, CUDA, HIP, or Vulkan backends; only the CPU and RPC backends are available.
-- **No embedded web UI.** The `llama-server` web UI cannot be built on Haiku (node/npm on Haiku is too old for the UI's build toolchain, and the prebuilt asset download is unavailable). The server's HTTP API works normally; pass `-DLLAMA_BUILD_UI=OFF` to silence the UI provisioning warnings.
 - **Audio thread priority.** Haiku does not implement `pthread_attr_setinheritsched` (the symbol is declared but unimplemented), so the miniaudio thread-priority path is skipped. Audio playback still works; only scheduling priority is affected.
 
 ### Maintenance
