@@ -17732,7 +17732,7 @@ static ma_result ma_thread_create__posix(ma_thread* pThread, ma_thread_priority 
 
                 /* I'm not treating a failure of setting the priority as a critical error so not aborting on failure here. */
                 if (pthread_attr_setschedparam(&attr, &sched) == 0) {
-                    #if !defined(MA_ANDROID) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 28)
+                    #if (!defined(MA_ANDROID) && !defined(__HAIKU__)) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 28)
                     {
                         pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
                     }
@@ -19475,7 +19475,7 @@ MA_API void ma_dlclose(ma_log* pLog, ma_handle handle)
         #else
         {
             /* Hack for Android bug (see https://github.com/android/ndk/issues/360). Calling dlclose() pre-API 28 may segfault. */
-            #if !defined(MA_ANDROID) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 28)
+            #if (!defined(MA_ANDROID) && !defined(__HAIKU__)) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 28)
             {
                 dlclose((void*)handle);
             }
